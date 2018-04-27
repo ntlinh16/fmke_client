@@ -35,8 +35,8 @@
 new(Id) ->
 
     %% read relevant configuration from config file
-    IPs = lasp_bench_config:get(fmk_server_ips,["127.0.0.1"]),
-    Ports = lasp_bench_config:get(fmk_server_ports,[9090]),
+    IPs = lasp_bench_config:get(fmke_server_ips,["127.0.0.1"]),
+    Ports = lasp_bench_config:get(fmke_server_ports,[9090]),
     NumPatients = lasp_bench_config:get(numpatients, 5000),
     NumPharmacies = lasp_bench_config:get(numpharmacies, 300),
     NumFacilities = lasp_bench_config:get(numfacilities, 50),
