@@ -121,16 +121,16 @@ run(create_prescription, _GeneratedKey, _GeneratedValue, State) ->
 
 
     fmk_request(HttpConn, Req, State,
-        fun(JsonResponse, State) ->
+        fun(JsonResponse, State2) ->
             case proplists:get_value(<<"success">>, JsonResponse) of
                 true ->
                     {ok,
-                        State#state {
-                            created_prescriptions = queue:in(PrescriptionId, State#state.created_prescriptions)
+                        State2#state {
+                            created_prescriptions = queue:in(PrescriptionId, State2#state.created_prescriptions)
                         }};
                 _ ->
                     Reason = proplists:get_value(<<"result">>, JsonResponse),
-                    {error, Reason, State}
+                    {error, Reason, State2}
             end
         end
         );
@@ -237,16 +237,16 @@ run(update_prescription, _GeneratedKey, _GeneratedValue, State) ->
     Req = {Method, URL, Headers, Payload},
 
     Res = fmk_request(HttpConn, Req, State,
-        fun(Json, State) ->
+        fun(Json, State2) ->
             case proplists:get_value(<<"success">>, Json) of
                 true ->
                     {ok,
-                        State#state {
+                        State2#state {
                             created_prescriptions = NewCreatedPrescriptions
                         }};
                 _ ->
                     Reason = proplists:get_value(<<"result">>, Json),
-                    {error, Reason, State}
+                    {error, Reason, State2}
             end
         end),
     case Res of
@@ -278,11 +278,11 @@ run(update_prescription_medication, _GeneratedKey, _GeneratedValue, State) ->
     Req = {Method, URL, Headers, Payload},
 
     Res = fmk_request(HttpConn, Req, State,
-        fun(Json, State) ->
+        fun(Json, State2) ->
             case proplists:get_value(<<"success">>, Json) of
                 true ->
                     {ok,
-                        State#state {
+                        State2#state {
                             created_prescriptions = State#state.created_prescriptions
                         }};
                 _ ->
