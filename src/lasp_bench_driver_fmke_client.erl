@@ -313,7 +313,7 @@ decode_json(Body) ->
         jsx:decode(Body)
     catch
         error:Err ->
-            io:format("JSON error ~p~nfor JSON:~n~p~n~p~n~n~n", [Err, Body, erlang:get_stacktrace()]),
+            io:format("JSON error ~p~nfor JSON:~n~p~n~n~n", [Err, Body]),
             []
     end.
 
