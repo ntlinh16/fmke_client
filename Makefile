@@ -10,7 +10,7 @@ REBAR           ?= $(BASE_DIR)/rebar3
 OVERLAY_VARS    ?=
 
 
-REBAR := ./rebar3
+REBAR := rebar3
 
 all: compile
 	${REBAR} escriptize
