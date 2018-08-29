@@ -1,105 +1,38 @@
-# Lasp Bench (former Basho Bench) [![Build Status](https://travis-ci.org/lasp-lang/lasp-bench.svg?branch=master)](https://travis-ci.org/lasp-lang/lasp-bench)
-A load-generation and testing tool for basically whatever you can write a returning Erlang function for.  
-Lasp Bench picks up where Basho Bench left off, offering the same functionality under current versions of Erlang/OTP and build tools. It is available as a Hex package.
+# fmke_client
+![Erlang Version](https://img.shields.io/badge/Erlang%2FOTP-21-brightgreen.svg)
+[![Build Status](https://travis-ci.org/goncalotomas/fmke_client.svg?branch=master)](https://travis-ci.org/goncalotomas/fmke_client)
 
-## Overview
+This repository contains client code for the [FMKe][fmke] benchmark. The client is available as a fork of
+[Lasp Bench][lasp_bench], a Workload Generation tool written in Erlang.
 
-Basho Bench is a benchmarking tool created to conduct accurate and
-   repeatable performance tests and stress tests, and produce
-   performance graphs.
+## Build
+To compile fmke_client you can run the following command:
 
-   Originally developed to benchmark Riak, it exposes a pluggable
-   driver interface and has been extended to serve as a benchmarking
-   tool across a variety of projects.
-
-   Basho Bench focuses on two metrics of performance:
-
-   - Throughput: number of operations performed in a timeframe,
-     captured in aggregate across all operation types
-   - Latency: time to complete single operations, captured in
-     quantiles per-operation
-
-## Quick Start
-
-   You must have [Erlang/OTP 18.3][1] or later to build and run Basho
-   Bench, and [R][2] to generate graphs of your benchmarks.  A sane
-   GNU-style build system is also required if you want to use `make`
-   to build the project.
-
-```bash
-git clone git://github.com/lasp-lang/lasp-bench.git
-cd lasp_bench
-make all
+```sh
+rebar3 escriptize
 ```
 
-This will build an executable script, `lasp_bench`, which you can
-use to run one of the existing benchmark configurations from the
-`examples/` directory. You will likely have to make some minor directory
-changes to the configs in order to get the examples running (see, e.g., the
-source of the bitcask and innostore benchmark config files for direction).
+This will download dependencies and generate a `lasp_bench` binary.
 
-At the end of the benchmark, results will be available in CSV
-format in the =tests/current/= directory. Now you can generate a
-graph:
+## Run
+You will find a `fmke_client.config` file under `examples` that should be configured with the IP addresses and
+corresponding ports of your running FMKe nodes.
 
-```bash
-make results
-priv/summary.r -i tests/current
-Loading required package: proto
-Loading required package: reshape
-Loading required package: plyr
-Loading required package: digest
-null device
-          1
-$ open tests/current/summary.png
+After ensuring you have a correct configuration file you can start the client by running:
+
+```sh
+./_build/default/bin/lasp_bench examples/fmke_client.config
 ```
 
-## Troubleshooting Graph Generation
+Note that you might require more than one instance of the client running at the same time in order to achieve maximum
+throughput on your database system. Refer to the [FMKe documentation][fmke_docs] for further instructions on achieving
+this.
 
-If make results fails with the error `/usr/bin/env: Rscript --vanilla: No such file or directory`
-please edit priv/summary.r and replace the first line with the full path to the Rscript binary on your system
+## Getting Results
+You can run `make results` to generate throughput and latency plots for a single client, but other utilities will be
+made available to allow the merging of results of multiple clients into a single, global result. Refer to the
+[FMKe documentation][fmke_docs].
 
-If you receive the error message `Warning: unable to access index for repository http://lib.stat.cmu.edu/R/CRAN/src/contrib`
-it means the default R repo for installing additional packages is broken, you can change it as follows:
-
-```bash
-$ R
-> chooseCRANmirror()
-Selection: 69
-quit()
-make results
-```
-
-## Customizing your Benchmark
-Basho Bench has multiple drivers, each with its own configuration, and
-a number of key and value generators that you can use to customize
-your benchmark. It is also straightforward -- with less than 200
-lines of Erlang code -- to create custom drivers that can exercise
-other systems or perform custom operations. These are covered more
-in detail in the [[http://docs.basho.com/riak/latest/cookbooks/Benchmarking/][documentation]].
-
-## Alternative Graph Generation by gnuplot
-You can generate graphs using gnuplot.
-
-```bash
-$ ./priv/gp_throughput.sh
-$ ./priv/gp_latency.sh
-```
-
-By passing `-h` option to each script, help messages are shown.
-
-Some of options for these scripts are:
-
-- `-d TEST_DIR` : comma separated list of directories which include
-     test result CSV files
-- `-t TERMINAL_TYPE` : gnuplot terminal type
-- `-P` : just print gnuplot script without drawing graph
-
-For example, you can draw graphs with ASCII characters
-by the option =-t dumb=, which is useful in non-graphical
-environment or quick sharing of result in chat.
-
-Also, you can plot multiple test runs on a single plot by using `-d` switch.
-
-[1]: http://erlang.org/download.html
-[2]: http://www.r-project.org
+[fmke]: https://github.com/goncalotomas/FMKe
+[lasp_bench]: https://github.com/lasp-lang/lasp_bench
+[fmke_docs]: https://github.com/goncalotomas/FMKe/wiki
