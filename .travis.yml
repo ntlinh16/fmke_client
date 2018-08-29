@@ -8,7 +8,7 @@ otp_release:
   - 19.3
   - 18.3
 install:
-  - ./rebar3 escriptize
+  - rebar3 escriptize
 script:
   - ./_build/default/bin/lasp_bench examples/null_test.config
   - ./_build/default/bin/lasp_bench examples/simple_test.config
