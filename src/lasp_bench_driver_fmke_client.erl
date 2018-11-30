@@ -35,6 +35,7 @@
 new(Id) ->
 
     %% read relevant configuration from config file
+    NumWorkers = lasp_bench_config:get(concurrent, 32),
     IPs = lasp_bench_config:get(fmke_server_ips,["127.0.0.1"]),
     Ports = lasp_bench_config:get(fmke_server_ports,[9090]),
     NumPatients = lasp_bench_config:get(numpatients, 5000),
@@ -60,8 +61,11 @@ new(Id) ->
     Transport = hackney_tcp,
     Host = list_to_binary(TargetNode),
     Port = TargetPort,
-    Options = [{pool, default}],
-    {ok, ConnRef} = hackney:connect(Transport, Host, Port, Options),
+    PoolName = fmke_conns,
+    Options = [{timeout, 150000}, {max_connections, NumWorkers*2}],
+    ok = hackney_pool:start_pool(PoolName, Options),
+    ConnOptions = [{pool, PoolName}],
+    {ok, ConnRef} = hackney:connect(Transport, Host, Port, ConnOptions),
 
     %% Seed random number
     rand:seed(exsplus, {erlang:phash2([node()]), erlang:monotonic_time(), erlang:unique_integer()}),
