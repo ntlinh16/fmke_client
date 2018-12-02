@@ -5,8 +5,6 @@
 
 -define (TIMEOUT, 5000).
 
--define (MAX_ACTIVE_PRESCRIPTIONS, 1000).
-
 -record(state,
   {
     pid,
@@ -26,7 +24,7 @@
     created_prescriptions
  }).
 
-%-define(TOURNAMENT_APP, tournament_si_app). Is this needed???
+-define(MAX_RETRIES, 3).
 
 %% ====================================================================
 %% API
@@ -89,55 +87,7 @@ new(Id) ->
     }.
 
 run(create_prescription, _GeneratedKey, _GeneratedValue, State) ->
-    NumPrescriptions = State#state.numprescriptions,
-    NumPharmacies = State#state.numpharmacies,
-    NumStaff = State#state.numstaff,
-    NumPatients = State#state.numpatients,
-
-    %% to avoid conflicting prescription ids
-    %%TODO store created prescriptions in a list inside client state.
-    MinimumId = 10000000,
-    PrescriptionId = rand:uniform(MinimumId)+NumPrescriptions,
-    PatientId = rand:uniform(NumPatients),
-    PrescriberId = rand:uniform(NumStaff),
-    PharmacyId = rand:uniform(NumPharmacies),
-    DatePrescribed = "1/1/2016",
-    Drugs = gen_prescription_drugs(),
-
-    FmkServerAddress = State#state.fmk_server_ip,
-    FmkServerPort = State#state.fmk_server_port,
-    HttpConn = State#state.http_connection,
-    Method = post,
-    Path = "prescriptions",
-    URL = generate_url(FmkServerAddress,FmkServerPort,Path),
-    Headers = [{<<"Connection">>, <<"keep-alive">>}],
-
-    Payload = jsx:encode([
-        {id,PrescriptionId},
-        {patient_id,PatientId},
-        {pharmacy_id,PharmacyId},
-        {prescriber_id,PrescriberId},
-        {drugs,Drugs},
-        {date_prescribed,DatePrescribed}
-    ]),
-
-    Req = {Method, URL, Headers, Payload},
-
-
-    fmk_request(HttpConn, Req, State,
-        fun(JsonResponse, State2) ->
-            case proplists:get_value(<<"success">>, JsonResponse) of
-                true ->
-                    {ok,
-                        State2#state {
-                            created_prescriptions = queue:in(PrescriptionId, State2#state.created_prescriptions)
-                        }};
-                _ ->
-                    Reason = proplists:get_value(<<"result">>, JsonResponse),
-                    {error, Reason, State2}
-            end
-        end
-        );
+    create_prescription(0, State);
 
 run(get_pharmacy_prescriptions, _GeneratedKey, _GeneratedValue, State) ->
     NumPharmacies = State#state.numpharmacies,
@@ -240,7 +190,7 @@ run(update_prescription, _GeneratedKey, _GeneratedValue, State) ->
     Payload = jsx:encode([{date_processed,DateProcessed}]),
     Req = {Method, URL, Headers, Payload},
 
-    Res = fmk_request(HttpConn, Req, State,
+    fmk_request(HttpConn, Req, State,
         fun(Json, State2) ->
             case proplists:get_value(<<"success">>, Json) of
                 true ->
@@ -252,19 +202,7 @@ run(update_prescription, _GeneratedKey, _GeneratedValue, State) ->
                     Reason = proplists:get_value(<<"result">>, Json),
                     {error, Reason, State2}
             end
-        end),
-    case Res of
-        {ok, NewState} ->
-            case queue:len(NewCreatedPrescriptions) > ?MAX_ACTIVE_PRESCRIPTIONS of
-                true ->
-                    % remove more prescriptions
-                    run(update_prescription, 0, 0, NewState);
-                false ->
-                    Res
-            end;
-        _ ->
-            Res
-    end;
+        end);
 
 run(update_prescription_medication, _GeneratedKey, _GeneratedValue, State) ->
     NumPrescriptions = State#state.numprescriptions,
@@ -311,6 +249,59 @@ run(get_prescription, _GeneratedKey, _GeneratedValue, State) ->
     Req = {Method, URL, Headers, Payload},
 
     fmk_request(HttpConn, Req, State).
+
+create_prescription(N, State) when N < ?MAX_RETRIES ->
+    NumPrescriptions = State#state.numprescriptions,
+    NumPharmacies = State#state.numpharmacies,
+    NumStaff = State#state.numstaff,
+    NumPatients = State#state.numpatients,
+
+    %% to avoid conflicting prescription ids
+    %%TODO store created prescriptions in a list inside client state.
+    MinimumId = 10000000,
+    PrescriptionId = rand:uniform(MinimumId)+NumPrescriptions,
+    PatientId = rand:uniform(NumPatients),
+    PrescriberId = rand:uniform(NumStaff),
+    PharmacyId = rand:uniform(NumPharmacies),
+    DatePrescribed = "1/1/2016",
+    Drugs = gen_prescription_drugs(),
+
+    FmkServerAddress = State#state.fmk_server_ip,
+    FmkServerPort = State#state.fmk_server_port,
+    HttpConn = State#state.http_connection,
+    Method = post,
+    Path = "prescriptions",
+    URL = generate_url(FmkServerAddress,FmkServerPort,Path),
+    Headers = [{<<"Connection">>, <<"keep-alive">>}],
+
+    Payload = jsx:encode([
+        {id,PrescriptionId},
+        {patient_id,PatientId},
+        {pharmacy_id,PharmacyId},
+        {prescriber_id,PrescriberId},
+        {drugs,Drugs},
+        {date_prescribed,DatePrescribed}
+    ]),
+
+    Req = {Method, URL, Headers, Payload},
+
+
+    fmk_request(HttpConn, Req, State,
+        fun(JsonResponse, State2) ->
+            Reason = proplists:get_value(<<"result">>, JsonResponse),
+            case proplists:get_value(<<"success">>, JsonResponse) of
+                true ->
+                    {ok, State2#state {
+                            created_prescriptions = queue:in(PrescriptionId, State2#state.created_prescriptions)
+                        }};
+                false when Reason == <<"aborted">>; Reason == <<"txn_aborted">> ->
+                    create_prescription(N+1, State2);
+                false ->
+                    {error, Reason, State2}
+            end
+        end);
+create_prescription(_N, State) ->
+    {error, too_many_retries, State}.
 
 decode_json(Body) ->
     try
