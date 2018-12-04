@@ -179,7 +179,7 @@ run(update_prescription, _GeneratedKey, _GeneratedValue, State) ->
             empty -> rand:uniform(NumPrescriptions)
         end,
 
-    DateProcessed = get_random_date(),
+    DateProcessed = gen_random_date(),
     FmkServerAddress = State#state.fmk_server_ip,
     FmkServerPort = State#state.fmk_server_port,
     HttpConn = State#state.http_connection,
@@ -263,7 +263,7 @@ create_prescription(N, State) when N < ?MAX_RETRIES ->
     PatientId = rand:uniform(NumPatients),
     PrescriberId = rand:uniform(NumStaff),
     PharmacyId = rand:uniform(NumPharmacies),
-    DatePrescribed = "1/1/2016",
+    DatePrescribed = gen_random_date(),
     Drugs = gen_prescription_drugs(),
 
     FmkServerAddress = State#state.fmk_server_ip,
@@ -330,8 +330,16 @@ gen_prescription_drugs() ->
 get_random_drug() ->
     integer_to_list(rand:uniform(10)).
 
-get_random_date() ->
-    binary_to_list(base64:encode(crypto:strong_rand_bytes(8))). % 8 character "date"
+gen_random_date() ->
+    Year = integer_to_list(rand:uniform(100) + 2000),
+    Month = padded_number(rand:uniform(12)),
+    Day = padded_number(rand:uniform(28)), %% we don't want to generate invalid days like 2012-02-31
+    Year ++ "-" ++ Month ++ "-" ++ Day.
+
+padded_number(X) when is_integer(X), X < 10 ->
+    "0" ++ integer_to_list(X);
+padded_number(X) when is_integer(X) ->
+    integer_to_list(X).
 
 fmk_request(HttpConn, Req, State) ->
     fmk_request(HttpConn, Req, State, fun simple_response_handler/2).
