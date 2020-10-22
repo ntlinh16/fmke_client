@@ -40,7 +40,7 @@ made available to allow the merging of results of multiple clients into a single
 ## Build
 Everything is packaged in a Docker image, you just need to get one
 
-You can built the Docker image locally:
+You can build the Docker image locally:
 ```
 git clone https://github.com/ntlinh16/fmke_client
 cd fmke_client/
